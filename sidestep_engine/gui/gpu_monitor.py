@@ -9,6 +9,8 @@ or no GPU is detected.
 from __future__ import annotations
 
 import logging
+import torch
+
 from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
@@ -30,6 +32,29 @@ def _ensure_nvml() -> bool:
     except Exception:
         _nvml_available = False
     return _nvml_available
+
+
+def _is_mps_available() -> bool:
+    """Check if Apple Silicon MPS is available."""
+    return torch.backends.mps.is_available()
+
+
+def _get_mps_snapshot() -> Dict[str, Any]:
+    """Return stats for Apple Silicon MPS using torch.mps."""
+    used = torch.mps.driver_allocated_memory()
+    limit = torch.mps.recommended_max_memory()
+    stats = {
+        "available": True,
+        "index": 0,
+        "name": "Apple Silicon MPS",
+        "vram_used_mb": used // (1024 * 1024),
+        "vram_total_mb": limit // (1024 * 1024),
+        "vram_free_mb": max(0, (limit - used) // (1024 * 1024)),
+        "utilization": 0,
+        "temperature": 0,
+        "power_draw_w": 0,
+    }
+    return stats
 
 
 def _snapshot_one(gpu_index: int) -> Dict[str, Any]:
@@ -61,15 +86,18 @@ def _snapshot_one(gpu_index: int) -> Dict[str, Any]:
 
 def get_all_gpus() -> List[Dict[str, Any]]:
     """Return a list of stats dicts, one per GPU."""
-    if not _ensure_nvml():
-        return []
-    try:
-        import pynvml
-        count = pynvml.nvmlDeviceGetCount()
-        return [_snapshot_one(i) for i in range(count)]
-    except Exception as exc:
-        logger.debug("GPU enumeration failed: %s", exc)
-        return []
+    if _ensure_nvml():
+        try:
+            import pynvml
+            count = pynvml.nvmlDeviceGetCount()
+            return [_snapshot_one(i) for i in range(count)]
+        except Exception as exc:
+            logger.debug("GPU enumeration failed: %s", exc)
+    
+    if _is_mps_available():
+        return [_get_mps_snapshot()]
+
+    return []
 
 
 def get_gpu_snapshot(gpu_index: int = 0) -> Dict[str, Any]:
@@ -79,9 +107,6 @@ def get_gpu_snapshot(gpu_index: int = 0) -> Dict[str, Any]:
     The response also includes a ``gpus`` list with all devices so
     the frontend can display a multi-GPU overview.
     """
-    if not _ensure_nvml():
-        return {"available": False, "name": "No GPU detected", "gpus": []}
-
     try:
         all_gpus = get_all_gpus()
         if not all_gpus:
@@ -92,5 +117,5 @@ def get_gpu_snapshot(gpu_index: int = 0) -> Dict[str, Any]:
         primary["gpus"] = all_gpus
         return primary
     except Exception as exc:
-        logger.debug("GPU snapshot failed: %s", exc)
+        logger.info("GPU snapshot failed: %s", exc)
         return {"available": False, "name": "GPU read error", "error": str(exc), "gpus": []}
