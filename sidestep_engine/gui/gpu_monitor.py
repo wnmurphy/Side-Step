@@ -39,20 +39,20 @@ def _is_mps_available() -> bool:
     return torch.backends.mps.is_available()
 
 
-def _get_mps_snapshot() -> Dict[str, Any]:
+def _get_mps_snapshot(gpu_index) -> Dict[str, Any]:
     """Return stats for Apple Silicon MPS using torch.mps."""
     used = torch.mps.driver_allocated_memory()
     limit = torch.mps.recommended_max_memory()
     stats = {
         "available": True,
-        "index": 0,
+        "index": gpu_index,
         "name": "Apple Silicon MPS",
         "vram_used_mb": used // (1024 * 1024),
         "vram_total_mb": limit // (1024 * 1024),
         "vram_free_mb": max(0, (limit - used) // (1024 * 1024)),
-        "utilization": 0,
-        "temperature": 0,
-        "power_draw_w": 0,
+        "utilization": "Not available ",
+        "temperature": "Not available ",
+        "power_draw_w": "Not available ",
     }
     return stats
 
@@ -101,7 +101,8 @@ def get_all_gpus() -> List[Dict[str, Any]]:
             logger.debug("GPU enumeration failed: %s", exc)
     
     if _is_mps_available():
-        available_gpus.append(_get_mps_snapshot())
+        gpu_index = len(available_gpus)
+        available_gpus.append(_get_mps_snapshot(gpu_index))
 
     return available_gpus
 
