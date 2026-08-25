@@ -86,18 +86,20 @@ def _snapshot_one(gpu_index: int) -> Dict[str, Any]:
 
 def get_all_gpus() -> List[Dict[str, Any]]:
     """Return a list of stats dicts, one per GPU."""
+    available_gpus = []
+
     if _ensure_nvml():
         try:
             import pynvml
             count = pynvml.nvmlDeviceGetCount()
-            return [_snapshot_one(i) for i in range(count)]
+            available_gpus.extend([_snapshot_one(i) for i in range(count)])
         except pynvml.NVMLError as exc:
             logger.debug("GPU enumeration failed: %s", exc)
     
     if _is_mps_available():
-        return [_get_mps_snapshot()]
+        available_gpus.append(_get_mps_snapshot())
 
-    return []
+    return available_gpus
 
 
 def get_gpu_snapshot(gpu_index: int = 0) -> Dict[str, Any]:
