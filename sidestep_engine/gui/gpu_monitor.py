@@ -50,9 +50,9 @@ def _get_mps_snapshot(gpu_index) -> Dict[str, Any]:
         "vram_used_mb": used // (1024 * 1024),
         "vram_total_mb": limit // (1024 * 1024),
         "vram_free_mb": max(0, (limit - used) // (1024 * 1024)),
-        "utilization": "Not available ",
-        "temperature": "Not available ",
-        "power_draw_w": "Not available ",
+        "utilization": "0",
+        "temperature": "0",
+        "power_draw_w": "0",
     }
     return stats
 
