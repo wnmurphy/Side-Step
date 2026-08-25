@@ -91,7 +91,7 @@ def get_all_gpus() -> List[Dict[str, Any]]:
             import pynvml
             count = pynvml.nvmlDeviceGetCount()
             return [_snapshot_one(i) for i in range(count)]
-        except Exception as exc:
+        except pynvml.NVMLError as exc:
             logger.debug("GPU enumeration failed: %s", exc)
     
     if _is_mps_available():
