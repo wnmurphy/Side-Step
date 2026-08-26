@@ -101,7 +101,7 @@ def get_all_gpus() -> List[Dict[str, Any]]:
             logger.debug("GPU enumeration failed: %s", exc)
     
     if _is_mps_available():
-        gpu_index = len(available_gpus)
+        gpu_index = 0 if not len(available_gpus) else available_gpus[-1].get("index", 0) + 1
         available_gpus.append(_get_mps_snapshot(gpu_index))
 
     return available_gpus
